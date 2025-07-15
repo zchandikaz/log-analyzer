@@ -1,6 +1,7 @@
 import json
 import re
 import sys
+import traceback
 from collections import defaultdict
 from datetime import datetime
 from difflib import SequenceMatcher
@@ -328,7 +329,7 @@ def cmd_rex(regex, input_field=None):
         try:
             if input_field is not None:
                 data = json.loads(line)
-                extracted_fields = regex_extract(data[input_field], regex)
+                extracted_fields = regex_extract(data[input_field] if input_field in data else '', regex)
                 data.update(extracted_fields)
                 out_write(json.dumps(data))
             else:
