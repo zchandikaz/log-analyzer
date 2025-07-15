@@ -3,11 +3,12 @@ import re
 import sys
 import traceback
 from collections import defaultdict
-from datetime import datetime
+from datetime import *
 from difflib import SequenceMatcher
 
 EXEC_UTIL_FUNCS = {
-    'strptime': lambda date_str, fmt="%Y-%m-%d %H:%M:%S,%f": datetime.strptime(date_str, fmt).timestamp() * 1000
+    'strptime': lambda date_str, fmt="%Y-%m-%d %H:%M:%S": datetime.strptime(date_str, fmt).timestamp() * 1000,
+    'strftime': lambda dt, fmt="%Y-%m-%d %H:%M:%S": datetime.fromtimestamp(dt / 1000).strftime(fmt),
 }
 BUILTINS = __builtins__
 CONCURRENT_THREAD_COUNT = 20
