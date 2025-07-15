@@ -38,13 +38,13 @@ Commands:
    - Example:
      cat server.log | lgx match "Access"
 
-2. rex <regex> [--input_field=field_name]
+2. rex <regex> [-i=field_name]
    - Extracts fields from log lines using a named-group regular expression and appends these fields as JSON.
-   - The --input_field parameter allows you to apply the regex to a specific field in the JSON data instead of the entire line.
+   - The -i parameter allows you to apply the regex to a specific field in the JSON data instead of the entire line.
    - Example:
      cat server.log | lgx rex "(?P<url>[A-Z]+ \S+)"
    - Extract fields from specific input field in JSON data:
-     cat server.log | lgx rex "(?P<method>[A-Z]+)" --input_field=request
+     cat server.log | lgx rex "(?P<method>[A-Z]+)" -i=request
 
 3. where <expression>
    - Filters logs based on the provided Python expression.
@@ -630,7 +630,10 @@ if __name__ == '__main__':
             regex = args[1]
             input_field = None
             for arg in args[2:]:
-                if arg.startswith("--input_field="):
+                if arg.startswith("-i="):
+                    input_field = arg.split("=", 1)[1]
+                    break
+                elif arg.startswith("--input_field="):  # For backward compatibility
                     input_field = arg.split("=", 1)[1]
                     break
             cmd_rex(regex, input_field)
