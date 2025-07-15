@@ -1,7 +1,7 @@
 # Setup
 
 ```shell
-curl -fsSL hhttps://github.com/zchandikaz/log-analyzer/master/install.sh | bash
+curl -fsSL https://github.com/zchandikaz/log-analyzer/raw/refs/heads/master/install.sh | bash
 ```
 
 

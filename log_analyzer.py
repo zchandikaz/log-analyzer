@@ -36,98 +36,98 @@ Commands:
 1. match <regex>
    - Filters logs that match the given regular expression.
    - Example:
-     cat server.log | la match "Access"
+     cat server.log | lgx match "Access"
 
 2. rex <regex>
    - Extracts fields from log lines using a named-group regular expression and appends these fields as JSON.
    - Example:
-     cat server.log | la rex "(?P<url>[A-Z]+ \S+)"
+     cat server.log | lgx rex "(?P<url>[A-Z]+ \S+)"
    - Extract fields from specific input data:
-     cat server.log | la rex "(?P<method>[A-Z]+)" --input_field=request
+     cat server.log | lgx rex "(?P<method>[A-Z]+)" --input_field=request
 
 3. where <expression>
    - Filters logs based on the provided Python expression.
    - Example:
-     cat server.log | la where "'GET' in url"
+     cat server.log | lgx where "'GET' in url"
    - Filter logs by numerical comparison:
-     cat server.log | la where "response_time > 200"
+     cat server.log | lgx where "response_time > 200"
 
 4. group <fields>
    - Groups logs by the specified keys, storing all grouped logs under a _grouped key.
    - Example:
-     cat server.log | la rex "(?P<rid>\d+)" | la group rid
+     cat server.log | lgx rex "(?P<rid>\d+)" | lgx group rid
 
 5. eval <expression>
    - Executes a Python statement on each log line's JSON representation. Updates the log data accordingly.
    - Example:
-     cat grouped.log | la eval "total_errors = len(_grouped)"
+     cat grouped.log | lgx eval "total_errors = len(_grouped)"
    - Add a new field calculation:
-     cat logs.json | la eval "status_code_group = status_code // 100"
+     cat logs.json | lgx eval "status_code_group = status_code // 100"
 
 6. geval <expression>
    - Like eval, but works on grouped data 
    - Example:
-     cat grouped.log | la geval "duration = max(rid) - min(rid)"
+     cat grouped.log | lgx geval "duration = max(rid) - min(rid)"
 
 7. sort <options>
    - Sorts logs by specified fields. Use + for ascending (default) and - for descending sorting.
    - Example:
-     cat logs.json | la sort -duration
+     cat logs.json | lgx sort -duration
    - Sort by multiple fields:
-     cat grouped.log | la sort -duration +status_code
+     cat grouped.log | lgx sort -duration +status_code
 
 8. reverse
    - Reverses the order of logs.
    - Example:
-     cat sorted.log | la reverse
+     cat sorted.log | lgx reverse
 
 9. count
    - Outputs the total count of log entries.
    - Example:
-     cat server.log | la count
+     cat server.log | lgx count
 
 10. show <fields>
     - Displays only the specified fields from each log.
     - Example:
-      cat server.log | la show rid duration
+      cat server.log | lgx show rid duration
     - Display specific fields with missing values as None:
-      cat server.log | la show url response_time
+      cat server.log | lgx show url response_time
 
 11. table
     - Outputs logs in a human-readable table format.
     - Example:
-      cat server.log | la table
+      cat server.log | lgx table
 
 12. json
     - Outputs the log data as a single JSON array.
     - Example:
-      cat server.log | la json
+      cat server.log | lgx json
 
 13. lookup <field> <lookup_data> [join_type]
     - Joins log data with lookup data based on a common field.
     - Join types: left (default), right, inner, outer
     - Example:
-      cat logs.json | la lookup user_id '[{"user_id": 123, "name": "John"}]'
+      cat logs.json | lgx lookup user_id '[{"user_id": 123, "name": "John"}]'
 
 14. graph <x_fields> <y_fields> [width]
     - Creates an ASCII bar graph visualization of the data.
     - Example:
-      cat stats.json | la graph timestamp,service response_time 80
+      cat stats.json | lgx graph timestamp,service response_time 80
 
 15. cluster <field> [-t=threshold]
     - Group similar logs based on the similarity of the specified field.
     - Example:
-      cat logs.json | la cluster message -t=0.8
+      cat logs.json | lgx cluster message -t=0.8
 
 16. resolve_multiline <regex>
     - Resolves multiline log entries based on a starting line pattern.
     - Example:
-      cat app.log | la resolve_multiline "^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]"
+      cat app.log | lgx resolve_multiline "^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]"
 
 17. gen <expression>
     - Generates data from Python expression and outputs as JSON lines.
     - Example:
-      la gen "[{'id':i, 'value':i*2} for i in range(5)]"
+      lgx gen "[{'id':i, 'value':i*2} for i in range(5)]"
 
 Examples:
 ---------
@@ -135,28 +135,28 @@ Examples:
 Example Workflow:
 -----------------
 1. Extract request IDs and group logs:
-   cat server.log | la rex "(?P<rid>\d+)" | la group rid
+   cat server.log | lgx rex "(?P<rid>\d+)" | lgx group rid
 
 2. Calculate duration for each group:
-   cat grouped.log | la geval "duration = max(rid) - min(rid)"
+   cat grouped.log | lgx geval "duration = max(rid) - min(rid)"
 
 3. Sort the grouped logs by the calculated duration in descending order:
-   cat grouped.log | la sort -duration
+   cat grouped.log | lgx sort -duration
 
 4. Join with user data and create a table:
-   cat logs.json | la lookup user_id '[{"user_id": 123, "name": "John"}]' | la table
+   cat logs.json | lgx lookup user_id '[{"user_id": 123, "name": "John"}]' | lgx table
 
 5. Visualize response times per service:
-   cat stats.json | la graph service response_time 80
+   cat stats.json | lgx graph service response_time 80
 
 6. Extract data while resolving multiline logs:
-   cat raw.log | la resolve_multiline "^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]" | la rex "(?P<level>[A-Z]+)" | la show level message
+   cat raw.log | lgx resolve_multiline "^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]" | lgx rex "(?P<level>[A-Z]+)" | lgx show level message
 
 7. Cluster log messages for similarity detection:
-   cat logs.json | la cluster message -t=0.75 | la table
+   cat logs.json | lgx cluster message -t=0.75 | lgx table
 
 8. Generate test data:
-   la gen "[{'id':i} for i in range(10)]"
+   lgx gen "[{'id':i} for i in range(10)]"
 
 """
 
