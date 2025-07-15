@@ -122,7 +122,7 @@ Commands:
 16. resolve_multiline <regex>
     - Resolves multiline log entries based on a starting line pattern.
     - Example:
-      cat app.log | lgx resolve_multiline "^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]"
+      cat app.log | lgx mul "^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]"
 
 17. gen <expression>
     - Generates data from Python expression and outputs as JSON lines.
@@ -150,7 +150,7 @@ Example Workflow:
    cat stats.json | lgx graph service response_time 80
 
 6. Extract data while resolving multiline logs:
-   cat raw.log | lgx resolve_multiline "^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]" | lgx rex "(?P<level>[A-Z]+)" | lgx show level message
+   cat raw.log | lgx mul "^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]" | lgx rex "(?P<level>[A-Z]+)" | lgx show level message
 
 7. Cluster log messages for similarity detection:
    cat logs.json | lgx cluster message -t=0.75 | lgx table
@@ -515,7 +515,7 @@ def cmd_show(fields):
         out_write(json.dumps(filtered_data))
 
 
-def cmd_resolve_multiline(line_pattern):
+def cmd_mul(line_pattern):
     previous_line = None
     for line in input_lines(strip=False):
         if re.search(line_pattern, line):
@@ -591,7 +591,7 @@ if __name__ == '__main__':
             cmd_rex(regex)
         elif action == "mul":
             line_pattern = args[1]
-            cmd_resolve_multiline(line_pattern)
+            cmd_mul(line_pattern)
         elif action == "match":
             regex = args[1]
             cmd_match(regex)
