@@ -1,4 +1,5 @@
 import json
+import math
 import re
 import sys
 import traceback
@@ -204,6 +205,47 @@ Example Workflow:
 
 
 # region : utils
+
+def perc(data, p):
+    """
+    Calculate the p-th percentile of a list of numbers.
+
+    Args:
+        data: List of numbers
+        p: Percentile (0-100)
+    Returns:
+        The p-th percentile value
+
+    Example:
+        percentile([1,2,3,4,5], 90)  # returns 90th percentile
+    """
+    if not 0 <= p <= 100:
+        raise ValueError("Percentile must be between 0 and 100")
+
+    # Make a copy and sort the data
+    sorted_data = sorted(data)
+    n = len(sorted_data)
+
+    if n == 0:
+        raise ValueError("Cannot calculate percentile of empty list")
+
+    # Convert percentage to decimal
+    p = p / 100.0
+
+    # Calculate the index
+    k = (n - 1) * p
+    f = math.floor(k)
+    c = math.ceil(k)
+
+    if f == c:
+        # If k is an integer, return that value
+        return sorted_data[int(k)]
+    else:
+        # Linear interpolation between the two nearest values
+        d0 = sorted_data[int(f)] * (c - k)
+        d1 = sorted_data[int(c)] * (k - f)
+        return d0 + d1
+
 def match_line_with_regex(line, regex):
     return re.search(regex, line) is not None
 
