@@ -511,6 +511,37 @@ def cmd_json():
     print(json.dumps([json.loads(line) for line in input_lines()]))
 
 
+def cmd_csv():
+    # Collect all lines and their fields
+    data = [json.loads(line) for line in input_lines()]
+    if not data:
+        return
+
+    # Get all unique fields across all records
+    fields = set()
+    for item in data:
+        fields.update(item.keys())
+    fields = sorted(list(fields))  # Sort fields for consistent column order
+
+    # Print header
+    print(','.join(f'"{field}"' for field in fields))
+
+    # Print data rows
+    for item in data:
+        row = []
+        for field in fields:
+            value = item.get(field, '')
+            # Escape quotes and special characters
+            if isinstance(value, str):
+                value = f'"{value.replace("`", "``")}"'
+            elif value is None:
+                value = '""'
+            else:
+                value = str(value)
+            row.append(value)
+        print(','.join(row))
+
+
 def cmd_lookup(field, lookup_data, join_type="left"):
     if not field:
         err_write("No lookup field specified")
@@ -675,6 +706,15 @@ def cmd_gen(expr):
         out_write(json.dumps(data))
 
 
+def cmd_dedup(fields):
+    known_lines = []
+    for line in input_lines():
+        data = NullSafeDict(json.loads(line))
+        key_data = ",".join([str(data[f]) for f in fields])
+        if key_data not in known_lines:
+            known_lines.append(key_data)
+            out_write(line)
+
 sys.stdout.reconfigure(line_buffering=True)
 
 if __name__ == '__main__':
@@ -730,8 +770,12 @@ if __name__ == '__main__':
             cmd_fields(args[1:])
         elif action == "table":
             cmd_table(args[1:])
+        elif action == "dedup":
+            cmd_dedup(args[1:])
         elif action == "json":
             cmd_json()
+        elif action == "csv":
+            cmd_csv()
         elif action == "lookup":
             cmd_lookup(args[1], args[2], args[3] if len(args) > 3 else "left")
         elif action == "graph":
