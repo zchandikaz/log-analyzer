@@ -205,16 +205,21 @@ cat your_log_file.log | lgx <command> [options]
   cat server.log | lgx json
   ```
 
-### 13. lookup \<field\> \<lookup_data\> [join_type]
+### 13. lookup \<field\> \<lookup_data_command\> [join_type]
 - Joins log data with lookup data based on a common field.
+- The lookup_data_command is executed to retrieve the lookup data (must output valid JSON).
 - Join types: left (default), right, inner, outer
 - Example:
   ```shell
-  cat logs.json | lgx lookup user_id '[{"user_id": 123, "name": "John"}]'
+  cat logs.json | lgx lookup user_id 'echo "[{\"user_id\": 123, \"name\": \"John\"}]"'
+  ```
+- Using a command to generate lookup data:
+  ```shell
+  cat logs.json | lgx lookup user_id 'cat users.json'
   ```
 - Using different join types:
   ```shell
-  cat logs.json | lgx lookup user_id '[{"user_id": 123, "name": "John"}]' inner
+  cat logs.json | lgx lookup user_id 'echo "[{\"user_id\": 123, \"name\": \"John\"}]"' inner
   ```
 
 ### 14. graph \<x_fields\> \<y_fields\> [width]
@@ -268,6 +273,57 @@ cat your_log_file.log | lgx <command> [options]
   ```shell
   lgx gen "[{'timestamp': f'2023-01-{i:02d}', 'count': i*10} for i in range(1, 31)]"
   ```
+
+### 18. dedup \<fields\>
+- Removes duplicate entries based on the specified fields.
+- Keeps only the first occurrence of each unique combination of field values.
+- Example:
+  ```shell
+  cat logs.json | lgx dedup user_id
+  ```
+- Deduplicate based on multiple fields:
+  ```shell
+  cat logs.json | lgx dedup user_id request_path
+  ```
+
+### 19. csv
+- Outputs the log data as a CSV file.
+- Automatically includes headers based on all fields present in the data.
+- Properly escapes special characters and handles quoting.
+- Example:
+  ```shell
+  cat logs.json | lgx csv
+  ```
+- Process and export data to CSV:
+  ```shell
+  cat logs.json | lgx where "status_code >= 400" | lgx csv
+  ```
+
+## Examples
+
+The repository includes detailed examples demonstrating how to use Log Analyzer for different types of logs:
+
+### Access Log Analysis
+
+The `examples/analyze-access-logs.md` file provides comprehensive examples for analyzing web server access logs, including:
+- Extracting fields with regex
+- Displaying data as tables
+- Sorting and filtering
+- Creating custom fields
+- Grouping and aggregating data
+- Generating graphs
+- Using lookup data to enrich logs
+
+### Java Application Log Analysis
+
+The `examples/analyze-java-logs.md` file demonstrates how to analyze Java application logs, including:
+- Extracting fields from standard Java log formats
+- Handling multiline logs (like exception stack traces)
+- Filtering logs by level or content
+- Grouping similar log messages
+- Converting timestamps between time zones
+
+Sample log files are provided in the `examples/logs/` directory.
 
 ## License
 

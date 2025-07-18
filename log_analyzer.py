@@ -163,13 +163,16 @@ Commands:
     - Example:
       cat server.log | lgx json
 
-13. lookup <field> <lookup_data> [join_type]
+13. lookup <field> <lookup_data_command> [join_type]
     - Joins log data with lookup data based on a common field.
+    - The lookup_data_command is executed to retrieve the lookup data (must output valid JSON).
     - Join types: left (default), right, inner, outer
     - Example:
-      cat logs.json | lgx lookup user_id '[{"user_id": 123, "name": "John"}]'
+      cat logs.json | lgx lookup user_id 'echo "[{\"user_id\": 123, \"name\": \"John\"}]"'
+    - Using a command to generate lookup data:
+      cat logs.json | lgx lookup user_id 'cat users.json'
     - Using different join types:
-      cat logs.json | lgx lookup user_id '[{"user_id": 123, "name": "John"}]' inner
+      cat logs.json | lgx lookup user_id 'echo "[{\"user_id\": 123, \"name\": \"John\"}]"' inner
 
 14. graph <x_fields> <y_fields> [width]
     - Creates an ASCII bar graph visualization of the data.
@@ -206,6 +209,23 @@ Commands:
       lgx gen "[{'id':i, 'value':i*2} for i in range(5)]"
     - Generate more complex test data:
       lgx gen "[{'timestamp': f'2023-01-{i:02d}', 'count': i*10} for i in range(1, 31)]"
+
+18. dedup <fields>
+    - Removes duplicate entries based on the specified fields.
+    - Keeps only the first occurrence of each unique combination of field values.
+    - Example:
+      cat logs.json | lgx dedup user_id
+    - Deduplicate based on multiple fields:
+      cat logs.json | lgx dedup user_id request_path
+
+19. csv
+    - Outputs the log data as a CSV file.
+    - Automatically includes headers based on all fields present in the data.
+    - Properly escapes special characters and handles quoting.
+    - Example:
+      cat logs.json | lgx csv
+    - Process and export data to CSV:
+      cat logs.json | lgx where "status_code >= 400" | lgx csv
 
 Examples:
 ---------
