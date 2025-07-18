@@ -6,7 +6,7 @@ import traceback
 from collections import defaultdict
 from datetime import *
 from difflib import SequenceMatcher
-
+import subprocess
 
 def percentile(data, p):
     """
@@ -367,7 +367,38 @@ class NullSafeDict(dict):
     def __missing__(self, key):
         return None
 
-
+def execute_command(command):
+    try:
+        # Run the command and capture output
+        result = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,  # Capture both stdout and stderr
+            text=True,            # Return strings rather than bytes
+            check=True           # Raise exception if command fails
+        )
+        return {
+            'success': True,
+            'output': result.stdout,
+            'error': None,
+            'return_code': result.returncode
+        }
+    except subprocess.CalledProcessError as e:
+        # Handle command execution errors
+        return {
+            'success': False,
+            'output': e.stdout,
+            'error': e.stderr,
+            'return_code': e.returncode
+        }
+    except Exception as e:
+        # Handle other exceptions
+        return {
+            'success': False,
+            'output': None,
+            'error': str(e),
+            'return_code': -1
+        }
 # endregion
 
 # region : cmd
@@ -484,7 +515,7 @@ def cmd_help():
 
 def cmd_table(fields=[]):
     data = [NullSafeDict(json.loads(line)) for line in input_lines()]
-    if fields:
+    if fields and len(fields)>0:
         for d in data:
             for k in list(d.keys()):
                 if k not in fields:
@@ -542,17 +573,23 @@ def cmd_csv():
         print(','.join(row))
 
 
-def cmd_lookup(field, lookup_data, join_type="left"):
+def cmd_lookup(field, lookup_data_command, join_type="left"):
     if not field:
         err_write("No lookup field specified")
         exit(1)
     try:
+        result = execute_command(lookup_data_command)
+        if not result['success']:
+            err_write("Error in the lookup command: "+str(result['error']))
+            exit(1)
+
+        lookup_data = result['output']
         right_data = json.loads(lookup_data)
         if not right_data:
-            err_write("Empty lookup data")
+            err_write("Empty lookup data.")
             exit(1)
     except json.JSONDecodeError:
-        err_write("Invalid lookup data format")
+        err_write("Invalid lookup data format\n---"+lookup_data+"\n---")
         exit(1)
 
     if join_type == "right" or join_type == "outer":
