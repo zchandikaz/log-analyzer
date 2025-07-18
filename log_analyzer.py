@@ -515,26 +515,39 @@ def cmd_help():
 
 def cmd_table(fields=[]):
     data = [NullSafeDict(json.loads(line)) for line in input_lines()]
-    if fields and len(fields)>0:
-        for d in data:
-            for k in list(d.keys()):
-                if k not in fields:
-                    del d[k]
-
     if not data:
         return
 
-    headers = list(data[0].keys())
+    # If fields are specified, use them as headers and filter data
+    if fields and len(fields) > 0:
+        headers = fields
+        # Filter out unwanted fields from each row
+        for d in data:
+            keys_to_remove = [k for k in d.keys() if k not in fields]
+            for k in keys_to_remove:
+                del d[k]
+    else:
+        # If no fields specified, use all keys from first row as headers
+        headers = list(data[0].keys())
 
-    col_widths = [max(len(str(row.get(key, ''))) for row in data) for key in headers]
-    col_widths = [max(len(header), width) for header, width in zip(headers, col_widths)]
+    # Calculate column widths based on data and headers
+    col_widths = []
+    for header in headers:
+        # Get max width of header and all values in this column
+        width = len(str(header))
+        for row in data:
+            cell_value = str(row.get(header, ''))
+            width = max(width, len(cell_value))
+        col_widths.append(width)
 
+    # Print header row
     header_row = " | ".join(header.ljust(width) for header, width in zip(headers, col_widths))
     print(header_row)
     print("-" * len(header_row))
 
+    # Print data rows
     for row in data:
-        row_str = " | ".join(str(row[key]).ljust(width) for key, width in zip(headers, col_widths))
+        row_str = " | ".join(str(row.get(key, '')).ljust(width) for key, width in zip(headers, col_widths))
         print(row_str)
 
 
