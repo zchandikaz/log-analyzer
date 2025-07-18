@@ -20,13 +20,13 @@ Log Analyzer is a versatile tool designed to help you extract, filter, transform
 #### Unix/Linux/macOS
 
 ```shell
-bash -c "$(curl -fsSL https://github.com/zchandikaz/log-analyzer/raw/refs/heads/master/install.sh)"
+bash -c "$(curl -fsSL https://github.com/zchandikaz/log-analyzer/raw/refs/heads/main/install.sh)"
 ```
 
 #### Windows
 
 ```powershell
-powershell -ExecutionPolicy Bypass -Command "Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://github.com/zchandikaz/log-analyzer/raw/refs/heads/master/install.ps1')"
+powershell -ExecutionPolicy Bypass -Command "Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://github.com/zchandikaz/log-analyzer/raw/refs/heads/main/install.ps1')"
 ```
 
 This will install the `lgx` command-line tool on your system.

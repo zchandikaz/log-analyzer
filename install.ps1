@@ -2,7 +2,7 @@
 # Similar to install.sh but adapted for Windows environment
 
 # Change this to the raw URL of log_analyzer.py in your GitHub repository
-$GITHUB_RAW_URL = "https://raw.githubusercontent.com/zchandikaz/log-analyzer/master/log_analyzer.py"
+$GITHUB_RAW_URL = "https://raw.githubusercontent.com/zchandikaz/log-analyzer/main/log_analyzer.py"
 
 # Function to check if running as administrator
 function Test-Admin {
