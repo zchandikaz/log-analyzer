@@ -1,36 +1,41 @@
 # Analyze Access Logs
 
-First I've attached sample access log file, you can find it in the logs folder.
+A sample access log file is provided in the logs folder for you to work with.
 
 ## Extract Fields
-Before you do anything, you have to extract the important data from logs. You can use a regex to do it. This follows regex syntaxes that work in python.
+Before analyzing logs, you need to extract the important data from them. You can use a regular expression (regex) to accomplish this. The following examples use regex syntax compatible with Python.
 
 ```shell
 cat sample_access.log \
 |lgx rex '(?P<ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+-\s+-\s+\[(?P<timestamp>[^\]]+)\]\s+"(?P<method>GET|POST|PUT|DELETE)\s+(?P<path>[^\s]+)\s+HTTP/\d\.\d"\s+(?P<status>\d{3})\s+(?P<bytes>\d+)\s+"(?P<user_agent>[^"]+)"'
 ```
 
-## Table
+## Display Data as a Table
 
-Let's see extracted data as a table
+You can view the extracted data in a tabular format for better readability:
 
 ```shell
 cat sample_access.log \
-|lgx rex '(?P<ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+-\s+-\s+\[(?P<timestamp>[^\]]+)\]\s+"(?P<method>GET|POST|PUT|DELETE)\s+(?P<path>[^\s]+)\s+HTTP/\d\.\d"\s+(?P<status>\d{3})\s+(?P<bytes>\d+)\s+"(?P<user_agent>[^"]+)"'\
+|lgx rex '(?P<ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+-\s+-\s+\[(?P<timestamp>[^\]]+)\]\s+"(?P<method>GET|POST|PUT|DELETE)\s+(?P<path>[^\s]+)\s+HTTP/\d\.\d"\s+(?P<status>\d{3})\s+(?P<bytes>\d+)\s+"(?P<user_agent>[^"]+)"' \
 |lgx table timestamp method path status bytes
 ```
-## Sort 
 
-Let's sort by method
+## Sort Data
+
+### Sort by HTTP Method
+
+You can sort the data by HTTP method:
 
 ```shell
 cat sample_access.log \
-|lgx rex '(?P<ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+-\s+-\s+\[(?P<timestamp>[^\]]+)\]\s+"(?P<method>GET|POST|PUT|DELETE)\s+(?P<path>[^\s]+)\s+HTTP/\d\.\d"\s+(?P<status>\d{3})\s+(?P<bytes>\d+)\s+"(?P<user_agent>[^"]+)"'\
+|lgx rex '(?P<ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s+-\s+-\s+\[(?P<timestamp>[^\]]+)\]\s+"(?P<method>GET|POST|PUT|DELETE)\s+(?P<path>[^\s]+)\s+HTTP/\d\.\d"\s+(?P<status>\d{3})\s+(?P<bytes>\d+)\s+"(?P<user_agent>[^"]+)"' \
 |lgx sort method \
 |lgx table timestamp method path status bytes
 ```
 
-Let's sort by response size descending, But before you sort by a numeric field, make sure to convert into numeric if it is not already
+### Sort by Response Size (Descending)
+
+When sorting by numeric fields, ensure they are converted to the correct data type first:
 
 ```shell
 cat sample_access.log \
@@ -40,10 +45,9 @@ cat sample_access.log \
 |lgx table timestamp method path status bytes
 ```
 
-## Create custom fields
+## Create Custom Fields
 
-I need to group by request. I mean method + path here.
-I need to create a one field with name request. We can use eval command for that. 
+To analyze requests effectively, it's useful to combine the HTTP method and path into a single field. You can create a custom field called "request" using the `eval` command:
 
 ```shell
 cat sample_access.log \
@@ -52,9 +56,11 @@ cat sample_access.log \
 |lgx table request
 ```
 
-## Group
+## Group and Aggregate Data
 
-Now I need to see the request count per each request type. You can use group command to do that, once you group, you can use geval command to person actions with grouped values. 
+### Count Requests by Type
+
+To see the count of requests per request type, use the `group` command followed by the `geval` command to perform actions on grouped values:
 
 ```shell
 cat sample_access.log \
@@ -65,8 +71,9 @@ cat sample_access.log \
 |lgx table request count
 ```
 
-Now I want to see count per request and ip
+### Count Requests by IP and Request Type
 
+To analyze the distribution of requests by both IP address and request type:
 
 ```shell
 cat sample_access.log \
@@ -77,7 +84,9 @@ cat sample_access.log \
 |lgx table ip request count
 ```
 
-I want to see max response size of each as well
+### Include Maximum Response Size
+
+To include the maximum response size for each IP and request type combination:
 
 ```shell
 cat sample_access.log \
@@ -89,9 +98,11 @@ cat sample_access.log \
 |lgx table ip request max_response_size_kb count 
 ```
 
-## Filter using fields
+## Filter Data
 
-I need to find if we got more than one request from same ip for same request type. We can use where command here.
+### Find Repeated Requests from Same IP
+
+To identify cases where the same IP address made multiple requests of the same type, use the `where` command to filter the results:
 
 ```shell
 cat sample_access.log \
@@ -104,9 +115,11 @@ cat sample_access.log \
 |lgx table ip request max_response_size_kb count
 ```
 
-## Generate Graph
+## Visualize Data with Graphs
 
-Let's turn this in to a bar chart, Let's get count per http status.
+### Count by HTTP Status
+
+Create a bar chart showing the count of requests per HTTP status code:
 
 ```shell
 cat sample_access.log \
@@ -116,7 +129,9 @@ cat sample_access.log \
 |lgx graph status count
 ```
 
-Let's get the max response size and count per status 
+### Response Size and Count by Status
+
+Visualize both the maximum response size and count per HTTP status code:
 
 ```shell
 cat sample_access.log \
@@ -127,7 +142,9 @@ cat sample_access.log \
 |lgx graph status max_response_size_kb,count
 ```
 
-Let's get the max response size and count per status and request type 
+### Multi-dimensional Analysis
+
+Analyze data by both request type and status code:
 
 ```shell
 cat sample_access.log \
@@ -140,11 +157,11 @@ cat sample_access.log \
 |lgx graph request,status max_response_size_kb,count
 ```
 
-## Lookup data
+## Enrich Data with External Sources
 
-I need to get the server name of ip from another source. We can do that using lookup command. 
+### Convert CSV to JSON for Lookup
 
-But lookup command only need a json. But we have the server names in a csv files. So let's transform the csv file in to a json
+To enrich your log data with server names from an external source, you can use the `lookup` command. First, convert the CSV file containing IP-to-server mappings into JSON format:
 
 ```shell
 cat ip_name.csv \
@@ -154,7 +171,9 @@ cat ip_name.csv \
 |lgx json
 ```
 
-Now let's join with our access logs data
+### Join with Access Log Data
+
+Now you can join this data with your access logs to add server names to your analysis:
 
 ```shell
 cat sample_access.log \
@@ -168,3 +187,11 @@ cat sample_access.log \
 |lgx table
 ```
 
+This command:
+1. Extracts fields from access logs
+2. Groups by IP address
+3. Counts requests per IP
+4. Looks up server names from the CSV file
+5. Handles missing server names by replacing them with 'N/A'
+6. Filters to show only IPs with multiple requests
+7. Displays the results in a table
