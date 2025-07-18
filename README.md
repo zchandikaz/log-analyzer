@@ -38,13 +38,13 @@ cat your_log_file.log | lgx <command> [options]
 1. **Extract request IDs and group logs:**
    ```shell
    # Extract request ID from log lines and group all logs with the same ID
-   cat server.log | lgx rex "(?P<rid>\d+)" | lgx group rid
+   cat server.log | lgx rex "rid=(?P<rid>\d+)" | lgx group rid
    ```
 
 2. **Calculate duration for each group:**
    ```shell
    # For each group, calculate the duration by finding the difference between max and min request IDs
-   cat grouped.log | lgx geval "duration = max(rid) - min(rid)"
+   cat grouped.log | lgx geval "duration = max(ts) - min(ts)"
    ```
 
 3. **Sort the grouped logs by the calculated duration in descending order:**
