@@ -303,25 +303,8 @@ cat your_log_file.log | lgx <command> [options]
 
 The repository includes detailed examples demonstrating how to use Log Analyzer for different types of logs:
 
-### Access Log Analysis
-
-The `examples/analyze-access-logs.md` file provides comprehensive examples for analyzing web server access logs, including:
-- Extracting fields with regex
-- Displaying data as tables
-- Sorting and filtering
-- Creating custom fields
-- Grouping and aggregating data
-- Generating graphs
-- Using lookup data to enrich logs
-
-### Java Application Log Analysis
-
-The `examples/analyze-java-logs.md` file demonstrates how to analyze Java application logs, including:
-- Extracting fields from standard Java log formats
-- Handling multiline logs (like exception stack traces)
-- Filtering logs by level or content
-- Grouping similar log messages
-- Converting timestamps between time zones
+- [Access Log Analysis](examples/analyze-access-logs.md)
+- [Java Application Log Analysis](examples/analyze-java-logs.md)
 
 Sample log files are provided in the `examples/logs/` directory.
 
