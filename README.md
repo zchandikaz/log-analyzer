@@ -52,6 +52,28 @@ Windows (Command Prompt):
 type your_log_file.log | lgx <command> [options]
 ```
 
+### Python Syntax in Commands
+
+Since Log Analyzer is built with Python, you can use Python syntax directly in some commands such as `eval`, `geval`, and `where`. This gives you the full power of Python for data manipulation, including:
+
+- Mathematical operations
+- String manipulation
+- List comprehensions
+- Conditional expressions
+- Built-in Python functions
+
+For example:
+```shell
+# Calculate a new field using Python math operations
+cat logs.json | lgx eval "response_time_ms = response_time * 1000"
+
+# Use string methods in a filter condition
+cat logs.json | lgx where "url.lower().endswith('.jpg')"
+
+# Apply complex transformations with Python's built-in functions
+cat logs.json | lgx geval "percentiles = {'p50': sorted(response_time)[len(response_time)//2], 'p90': sorted(response_time)[int(len(response_time)*0.9)]}"
+```
+
 ### Example Workflows
 
 1. **Extract request IDs and group logs:**
