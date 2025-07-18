@@ -17,20 +17,39 @@ Log Analyzer is a versatile tool designed to help you extract, filter, transform
 
 ### Installation
 
+#### Unix/Linux/macOS
+
 ```shell
 bash -c "$(curl -fsSL https://github.com/zchandikaz/log-analyzer/raw/refs/heads/master/install.sh)"
+```
+
+#### Windows
+
+```powershell
+powershell -ExecutionPolicy Bypass -Command "Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://github.com/zchandikaz/log-analyzer/raw/refs/heads/master/install.ps1')"
 ```
 
 This will install the `lgx` command-line tool on your system.
 
 ## Usage
 
-Log Analyzer is designed to work with Unix pipes, allowing you to chain commands together for complex log processing workflows.
+Log Analyzer is designed to work with command-line pipes, allowing you to chain commands together for complex log processing workflows. It works on both Unix-based systems (using bash pipes) and Windows systems (using PowerShell or Command Prompt pipes).
 
 ### Basic Usage Pattern
 
+Unix/Linux/macOS:
 ```shell
 cat your_log_file.log | lgx <command> [options]
+```
+
+Windows (PowerShell):
+```powershell
+Get-Content your_log_file.log | lgx <command> [options]
+```
+
+Windows (Command Prompt):
+```cmd
+type your_log_file.log | lgx <command> [options]
 ```
 
 ### Example Workflows
