@@ -143,13 +143,13 @@ Commands:
    - Example:
      cat server.log | lgx count
 
-10. show <fields>
+10. fields <fields>
     - Displays only the specified fields from each log.
     - Fields not present in the log will be shown as null.
     - Example:
-      cat server.log | lgx show rid duration
+      cat server.log | lgx fields rid duration
     - Display specific fields with missing values as None:
-      cat server.log | lgx show url response_time
+      cat server.log | lgx fields url response_time
 
 11. table
     - Outputs logs in a human-readable table format.
@@ -235,7 +235,7 @@ Example Workflow:
 
 6. Extract data while resolving multiline logs:
    # Combine multiline log entries, then extract and display only the log level and message
-   cat raw.log | lgx mul "^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]" | lgx rex "(?P<level>[A-Z]+)" | lgx show level message
+   cat raw.log | lgx mul "^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]" | lgx rex "(?P<level>[A-Z]+)" | lgx fields level message
 
 7. Cluster log messages for similarity detection:
    # Group similar log messages with 75% similarity threshold and display as a table

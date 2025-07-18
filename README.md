@@ -69,7 +69,7 @@ cat your_log_file.log | lgx <command> [options]
 6. **Extract data while resolving multiline logs:**
    ```shell
    # Combine multiline log entries, then extract and display only the log level and message
-   cat raw.log | lgx mul "^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]" | lgx rex "(?P<level>[A-Z]+)" | lgx show level message
+   cat raw.log | lgx mul "^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]" | lgx rex "(?P<level>[A-Z]+)" | lgx fields level message
    ```
 
 7. **Cluster log messages for similarity detection:**
@@ -177,16 +177,16 @@ cat your_log_file.log | lgx <command> [options]
   cat server.log | lgx count
   ```
 
-### 10. show \<fields\>
+### 10. fields \<fields\>
 - Displays only the specified fields from each log.
 - Fields not present in the log will be shown as null.
 - Example:
   ```shell
-  cat server.log | lgx show rid duration
+  cat server.log | lgx fields rid duration
   ```
 - Display specific fields with missing values as None:
   ```shell
-  cat server.log | lgx show url response_time
+  cat server.log | lgx fields url response_time
   ```
 
 ### 11. table
