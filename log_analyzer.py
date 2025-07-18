@@ -482,8 +482,14 @@ def cmd_help():
     out_write(documentation)
 
 
-def cmd_table():
+def cmd_table(fields=[]):
     data = [NullSafeDict(json.loads(line)) for line in input_lines()]
+    if fields:
+        for d in data:
+            for k in list(d.keys()):
+                if k not in fields:
+                    del d[k]
+
     if not data:
         return
 
@@ -595,7 +601,7 @@ def cmd_count():
     out_write(str(c))
 
 
-def cmd_show(fields):
+def cmd_fields(fields):
     for line in input_lines():
         line = json.loads(line)
         filtered_data = {}
@@ -720,10 +726,10 @@ if __name__ == '__main__':
             cmd_cluster(args[1] if len(args) > 1 else None, threshold)
         elif action == "count":
             cmd_count()
-        elif action == "show":
-            cmd_show(args[1:])
+        elif action == "fields":
+            cmd_fields(args[1:])
         elif action == "table":
-            cmd_table()
+            cmd_table(args[1:])
         elif action == "json":
             cmd_json()
         elif action == "lookup":
