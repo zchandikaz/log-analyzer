@@ -7,6 +7,8 @@ from collections import defaultdict
 from datetime import *
 from difflib import SequenceMatcher
 import subprocess
+from enum import Enum
+from contextlib import contextmanager
 
 def percentile(data, p):
     """
@@ -62,15 +64,23 @@ GROUPED_KEY = "_grouped"
 LINE_KEY = "_line"
 CLUSTER_RATIO_KEY = "_cluster_ratio"
 
+class Colors(Enum):
+    RESET = "\033[0m"
+    RED = "\033[31m"
+    GREEN = "\033[32m"
+    YELLOW = "\033[33m"
+    BLUE = "\033[34m"
+    MAGENTA = "\033[35m"
+    CYAN = "\033[36m"
+
 ANSI_COLORS = [
-    "\033[36m",  # cyan
-    "\033[33m",  # yellow
-    "\033[35m",  # magenta
-    "\033[32m",  # green
-    "\033[34m",  # blue
-    "\033[31m"  # red
+    Colors.CYAN.value,
+    Colors.YELLOW.value,
+    Colors.MAGENTA.value,
+    Colors.GREEN.value,
+    Colors.BLUE.value,
+    Colors.RED.value
 ]
-RESET = "\033[0m"
 
 documentation = r"""
 Log Analyzer Tool - Command Line Documentation
@@ -300,9 +310,12 @@ def out_write(line):
         raise InterruptedError
 
 
-def err_write(line):
+def err_write(line, color=None):
     try:
-        sys.stderr.write(line + "\n")
+        if sys.stderr.isatty() and color and isinstance(color, Colors):
+            sys.stderr.write(color.value + line + Colors.RESET.value + "\n")
+        else:
+            sys.stderr.write(line + "\n")
     except OSError:
         raise InterruptedError
 
@@ -419,12 +432,29 @@ def execute_command(command):
             'error': str(e),
             'return_code': -1
         }
+
+
+@contextmanager
+def error_handler(operation_name, context_info={}):
+    try:
+        yield
+    except (InterruptedError, KeyboardInterrupt) as e:
+        raise e
+    except Exception as e:
+        error_msg = f"""
+{Colors.RED.value}Error while processing command {operation_name.upper()} {Colors.RESET.value}
+{Colors.YELLOW.value}Error: {Colors.RESET.value}{str(e)}"""
+        for context_key, context_value in context_info.items():
+            error_msg += f"\n{Colors.YELLOW.value}{context_key}: {Colors.RESET.value} {context_value}"
+        err_write(error_msg)
+        exit(1)
+
 # endregion
 
 # region : cmd
 def cmd_rex(regex, input_field=None):
     for line in input_lines():
-        try:
+        with error_handler("rex", {"Regex": regex, "Line": line}):
             if input_field is not None:
                 data = json.loads(line)
                 extracted_fields = regex_extract(data[input_field] if input_field in data else '', regex)
@@ -434,99 +464,79 @@ def cmd_rex(regex, input_field=None):
                 extracted_fields = regex_extract(line, regex)
                 extracted_fields[LINE_KEY] = line
                 out_write(json.dumps(extracted_fields))
-        except (InterruptedError, KeyboardInterrupt) as e:
-            raise e
-        except Exception as e:
-            err_write("Error while processing rex\n" + line + "\n" + str(e))
-            exit(1)
-
 
 def cmd_match(regex):
     for line in input_lines():
-        if match_line_with_regex(line, regex):
-            out_write(line)
+        with error_handler("match", {"Regex": regex, "Line": line}):
+            if match_line_with_regex(line, regex):
+                out_write(line)
 
 
 def cmd_where(expr):
     for line in input_lines():
-        try:
+        with error_handler("where", {"Expression": expr, "Line": line}):
             if safe_eval(expr, json.loads(line)):
                 out_write(line)
-        except (InterruptedError, KeyboardInterrupt) as e:
-            raise e
-        except Exception as e:
-            err_write("Error while processing where\n" + line + "\n" + str(e))
-            exit(1)
-
 
 def cmd_eval(expr):
     for line in input_lines():
-        try:
+        with error_handler("eval", {"Expression": expr, "Line": line}):
             data = json.loads(line)
             safe_exec(expr, data)
             out_write(json.dumps(data))
-        except (InterruptedError, KeyboardInterrupt) as e:
-            raise e
-        except Exception as e:
-            err_write("Error while processing eval\n" + line + "\n" + str(e))
-            exit(1)
-
 
 def cmd_sort(sort_option_exprs):
     lines = [NullSafeDict(json.loads(line)) for line in input_lines()]
     sort_options = []
-    for expr in sort_option_exprs:
-        flag = expr[0]
-        if flag == "-":
-            reverse = True
-            expr = expr[1:]
-        elif flag == "+":
-            reverse = False
-            expr = expr[1:]
-        else:
-            reverse = False
-        sort_options.append((expr, reverse))
-
-    def sort_key(line_data):
-        key = []
-        for sort_option in sort_options:
-            field_name, reverse = sort_option
-            if reverse:
-                if isinstance(line_data.get(field_name), (int, float)):
-                    key.append(-line_data.get(field_name))
-                else:
-                    err_write("negative sort key for non-numeric value not supported: " + field_name + "")
-                    exit(1)
+    with error_handler("sort", {"Options": " ".join(sort_option_exprs)}):
+        for expr in sort_option_exprs:
+            flag = expr[0]
+            if flag == "-":
+                reverse = True
+                expr = expr[1:]
+            elif flag == "+":
+                reverse = False
+                expr = expr[1:]
             else:
-                key.append(line_data.get(field_name))
-        return tuple(key)
+                reverse = False
+            sort_options.append((expr, reverse))
 
-    lines.sort(key=sort_key)
+        def sort_key(line_data):
+            key = []
+            for sort_option in sort_options:
+                field_name, reverse = sort_option
+                if reverse:
+                    if isinstance(line_data.get(field_name), (int, float)):
+                        key.append(-line_data.get(field_name))
+                    else:
+                        err_write("negative sort key for non-numeric value not supported: " + field_name + "")
+                        exit(1)
+                else:
+                    key.append(line_data.get(field_name))
+            return tuple(key)
 
-    for line in lines:
-        out_write(json.dumps(line))
+        lines.sort(key=sort_key)
+
+        for line in lines:
+            out_write(json.dumps(line))
 
 
 def cmd_group_eval(expr):
     for line in input_lines():
-        try:
+        with error_handler("geval", {"Expression": expr, "Line": line}):
             data = json.loads(line)
             safe_exec(expr, data, True)
             out_write(json.dumps(data))
-        except InterruptedError as e:
-            raise e
-        except Exception as e:
-            err_write("Error while processing eval\n" + line + "\n" + str(e))
-            exit(1)
 
 
 def cmd_reverse():
-    lines = [line for line in input_lines()]
+    with error_handler("reverse", {}):
+        lines = [line for line in input_lines()]
 
-    lines.reverse()
+        lines.reverse()
 
-    for line in lines:
-        out_write(line)
+        for line in lines:
+            out_write(line)
 
 
 def cmd_help():
@@ -534,81 +544,84 @@ def cmd_help():
 
 
 def cmd_table(fields=[]):
-    data = [NullSafeDict(json.loads(line)) for line in input_lines()]
-    if not data:
-        return
+    with error_handler("table", {"Fields": " ".join(fields)}):
+        data = [NullSafeDict(json.loads(line)) for line in input_lines()]
+        if not data:
+            return
 
-    # If fields are specified, use them as headers and filter data
-    if fields and len(fields) > 0:
-        headers = fields
-        # Filter out unwanted fields from each row
-        for d in data:
-            keys_to_remove = [k for k in d.keys() if k not in fields]
-            for k in keys_to_remove:
-                del d[k]
-    else:
-        # If no fields specified, use all keys from first row as headers
-        headers = list(data[0].keys())
+        # If fields are specified, use them as headers and filter data
+        if fields and len(fields) > 0:
+            headers = fields
+            # Filter out unwanted fields from each row
+            for d in data:
+                keys_to_remove = [k for k in d.keys() if k not in fields]
+                for k in keys_to_remove:
+                    del d[k]
+        else:
+            # If no fields specified, use all keys from first row as headers
+            headers = list(data[0].keys())
 
-    # Calculate column widths based on data and headers
-    col_widths = []
-    for header in headers:
-        # Get max width of header and all values in this column
-        width = len(str(header))
+        # Calculate column widths based on data and headers
+        col_widths = []
+        for header in headers:
+            # Get max width of header and all values in this column
+            width = len(str(header))
+            for row in data:
+                cell_value = str(row.get(header, ''))
+                width = max(width, len(cell_value))
+            col_widths.append(width)
+
+        # Print header row
+        header_row = " | ".join(header.ljust(width) for header, width in zip(headers, col_widths))
+        print(header_row)
+        print("-" * len(header_row))
+
+        # Print data rows
         for row in data:
-            cell_value = str(row.get(header, ''))
-            width = max(width, len(cell_value))
-        col_widths.append(width)
-
-    # Print header row
-    header_row = " | ".join(header.ljust(width) for header, width in zip(headers, col_widths))
-    print(header_row)
-    print("-" * len(header_row))
-
-    # Print data rows
-    for row in data:
-        row_str = " | ".join(str(row.get(key, '')).ljust(width) for key, width in zip(headers, col_widths))
-        print(row_str)
+            row_str = " | ".join(str(row.get(key, '')).ljust(width) for key, width in zip(headers, col_widths))
+            print(row_str)
 
 
 def cmd_json():
-    print(json.dumps([json.loads(line) for line in input_lines()]))
+    with error_handler("json", {}):
+        print(json.dumps([json.loads(line) for line in input_lines()]))
 
 
 def cmd_csv():
-    # Collect all lines and their fields
-    data = [json.loads(line) for line in input_lines()]
-    if not data:
-        return
+    with error_handler("csv", {}):
+        # Collect all lines and their fields
+        data = [json.loads(line) for line in input_lines()]
+        if not data:
+            return
 
-    # Get all unique fields across all records
-    fields = set()
-    for item in data:
-        fields.update(item.keys())
-    fields = sorted(list(fields))  # Sort fields for consistent column order
+        # Get all unique fields across all records
+        fields = set()
+        for item in data:
+            fields.update(item.keys())
+        fields = sorted(list(fields))  # Sort fields for consistent column order
 
-    # Print header
-    print(','.join(f'"{field}"' for field in fields))
+        # Print header
+        print(','.join(f'"{field}"' for field in fields))
 
-    # Print data rows
-    for item in data:
-        row = []
-        for field in fields:
-            value = item.get(field, '')
-            # Escape quotes and special characters
-            if isinstance(value, str):
-                value = f'"{value.replace("`", "``")}"'
-            elif value is None:
-                value = '""'
-            else:
-                value = str(value)
-            row.append(value)
-        print(','.join(row))
+        # Print data rows
+        for item in data:
+            row = []
+            for field in fields:
+                value = item.get(field, '')
+                # Escape quotes and special characters
+                if isinstance(value, str):
+                    value = f'"{value.replace("`", "``")}"'
+                elif value is None:
+                    value = '""'
+                else:
+                    value = str(value)
+                row.append(value)
+            print(','.join(row))
 
 
 def cmd_lookup(field, lookup_data_command, join_type="left"):
     if not field:
-        err_write("No lookup field specified")
+        err_write("No lookup field specified", Colors.RED)
         exit(1)
     try:
         result = execute_command(lookup_data_command)
@@ -762,7 +775,7 @@ def cmd_graph(x_fields, y_fields, width=100):
             color = yfield_color[y_field]
             # Only print the label on the first y_field row per label group
             label_to_print = label if i == 0 else ' ' * longest_label
-            print(f"{label_to_print:>{longest_label}} | {y_field:>{y_field_name_len}}: {color}{bar}{RESET} ({value})")
+            print(f"{label_to_print:>{longest_label}} | {y_field:>{y_field_name_len}}: {color}{bar}{Colors.RESET.value} ({value})")
 
     # endregion
 
