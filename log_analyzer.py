@@ -242,6 +242,12 @@ Commands:
     - Process and export data to CSV:
       cat logs.json | lgx where "status_code >= 400" | lgx csv
 
+20. upgrade
+    - Updates the log analyzer tool to the latest version from the GitHub repository.
+    - This command downloads the latest version of the script and replaces the current installation.
+    - Example:
+      lgx upgrade
+
 Examples:
 ---------
 
