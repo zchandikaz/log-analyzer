@@ -508,7 +508,7 @@ def cmd_eval(expr):
             out_write(json.dumps(data))
 
 
-def cmd_sort(sort_option_exprs):
+def cmd_sort(sort_option_exprs, limit=None):
     lines = [NullSafeDict(json_loads(line)) for line in input_lines()]
     sort_options = []
     with error_handler("sort", {"Options": " ".join(sort_option_exprs)}):
@@ -539,7 +539,11 @@ def cmd_sort(sort_option_exprs):
 
         lines.sort(key=sort_key)
 
+        count = 0
         for line in lines:
+            count += 1
+            if limit is not None and count > limit:
+                break
             out_write(json.dumps(line))
 
 
@@ -877,8 +881,14 @@ if __name__ == '__main__':
             expr = args[1]
             cmd_group_eval(expr)
         elif action == "sort":
-            options = args[1:]
-            cmd_sort(options)
+            limit = None
+            for arg in args[1:]:
+                if arg.startswith("-l=") or arg.startswith("--limit="):
+                    limit = int(arg.split("=")[1])
+                    args.remove(arg)
+                    break
+
+            cmd_sort(args[1:], limit)
         elif action == "reverse":
             cmd_reverse()
         elif action == "group":
