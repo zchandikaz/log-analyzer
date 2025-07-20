@@ -1,4 +1,5 @@
 import json
+import urllib.request
 import math
 import re
 import subprocess
@@ -826,7 +827,18 @@ def cmd_dedup(fields):
                 known_lines.append(key_data)
                 out_write(line)
 
-    # endregion
+def cmd_upgrade():
+    with error_handler("upgrade"):
+        url = "https://raw.githubusercontent.com/zchandikaz/log-analyzer/main/log_analyzer.py"
+        response = urllib.request.urlopen(url)
+        content = response.read().decode('utf-8')
+
+        with open(__file__, 'w') as f:
+            f.write(content)
+
+        out_write("Successfully upgraded.")
+
+# endregion
 
 
 sys.stdout.reconfigure(line_buffering=True)
@@ -897,5 +909,7 @@ if __name__ == '__main__':
         elif action == "gen":
             expr = args[1]
             cmd_gen(expr)
+        elif action == "upgrade":
+            cmd_upgrade()
         else:
             raise Exception("Unknown command.")
