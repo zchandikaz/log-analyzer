@@ -1,16 +1,14 @@
 import json
 import math
 import re
+import subprocess
 import sys
-import traceback
+from collections import OrderedDict
 from collections import defaultdict
+from contextlib import contextmanager
 from datetime import *
 from difflib import SequenceMatcher
-import subprocess
 from enum import Enum
-from contextlib import contextmanager
-from collections import OrderedDict
-
 
 def percentile(data, p):
     """
@@ -593,20 +591,20 @@ def cmd_table(fields=[]):
                 width = max(width, len(cell_value))
             col_widths.append(width)
 
-        # Print header row
+        # Write header row
         header_row = " | ".join(header.ljust(width) for header, width in zip(headers, col_widths))
-        print(header_row)
-        print("-" * len(header_row))
+        out_write(header_row)
+        out_write("-" * len(header_row))
 
-        # Print data rows
+        # Write data rows
         for row in data:
             row_str = " | ".join(str(row.get(key, '')).ljust(width) for key, width in zip(headers, col_widths))
-            print(row_str)
+            out_write(row_str)
 
 
 def cmd_json():
     with error_handler("json", {}):
-        print(json.dumps([json_loads(line) for line in input_lines()]))
+        out_write(json.dumps([json_loads(line) for line in input_lines()]))
 
 
 def cmd_csv():
@@ -622,10 +620,10 @@ def cmd_csv():
             fields.update(item.keys())
         fields = sorted(list(fields))  # Sort fields for consistent column order
 
-        # Print header
-        print(','.join(f'"{field}"' for field in fields))
+        # Write header
+        out_write(','.join(f'"{field}"' for field in fields))
 
-        # Print data rows
+        # Write data rows
         for item in data:
             row = []
             for field in fields:
@@ -638,7 +636,7 @@ def cmd_csv():
                 else:
                     value = str(value)
                 row.append(value)
-            print(','.join(row))
+            out_write(','.join(row))
 
 
 def cmd_lookup(field, lookup_data_command, join_type="left"):
@@ -802,10 +800,10 @@ def cmd_graph(x_fields, y_fields, width=100):
                 bar_len = int((value / max_value) * width) if max_value else 0
                 bar = '#' * bar_len
                 color = yfield_color[y_field]
-                # Only print the label on the first y_field row per label group
-                label_to_print = label if i == 0 else ' ' * longest_label
-                print(
-                    f"{label_to_print:>{longest_label}} | {y_field:>{y_field_name_len}}: {color}{bar}{Colors.RESET.value} ({value})")
+                # Only write the label on the first y_field row per label group
+                label_to_write = label if i == 0 else ' ' * longest_label
+                out_write(
+                    f"{label_to_write:>{longest_label}} | {y_field:>{y_field_name_len}}: {color}{bar}{Colors.RESET.value} ({value})")
 
 
 def cmd_gen(expr):
