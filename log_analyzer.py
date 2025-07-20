@@ -9,6 +9,8 @@ from difflib import SequenceMatcher
 import subprocess
 from enum import Enum
 from contextlib import contextmanager
+from collections import OrderedDict
+
 
 def percentile(data, p):
     """
@@ -55,7 +57,8 @@ EXEC_UTIL_FUNCS = {
     'strptime': lambda date_str, fmt="%Y-%m-%d %H:%M:%S": datetime.strptime(date_str, fmt).timestamp() * 1000,
     'strftime': lambda dt, fmt="%Y-%m-%d %H:%M:%S": datetime.fromtimestamp(dt / 1000).strftime(fmt),
     'perc': percentile,
-    'avg': lambda data: sum(data) / len(data)
+    'avg': lambda data: sum(data) / len(data),
+    'iif': lambda cond, true_val, false_val: true_val if cond else false_val,
 }
 BUILTINS = __builtins__
 CONCURRENT_THREAD_COUNT = 20
@@ -63,6 +66,7 @@ CONCURRENT_THREAD_COUNT = 20
 GROUPED_KEY = "_grouped"
 LINE_KEY = "_line"
 CLUSTER_RATIO_KEY = "_cluster_ratio"
+
 
 class Colors(Enum):
     RESET = "\033[0m"
@@ -72,6 +76,7 @@ class Colors(Enum):
     BLUE = "\033[34m"
     MAGENTA = "\033[35m"
     CYAN = "\033[36m"
+
 
 ANSI_COLORS = [
     Colors.CYAN.value,
@@ -400,6 +405,7 @@ class NullSafeDict(dict):
     def __missing__(self, key):
         return None
 
+
 def execute_command(command):
     try:
         # Run the command and capture output
@@ -407,8 +413,8 @@ def execute_command(command):
             command,
             shell=True,
             capture_output=True,  # Capture both stdout and stderr
-            text=True,            # Return strings rather than bytes
-            check=True           # Raise exception if command fails
+            text=True,  # Return strings rather than bytes
+            check=True  # Raise exception if command fails
         )
         return {
             'success': True,
@@ -437,17 +443,31 @@ def execute_command(command):
 @contextmanager
 def error_handler(operation_name, context_info={}):
     try:
-        yield
-    except (InterruptedError, KeyboardInterrupt) as e:
-        raise e
+        yield context_info
+    except (InterruptedError, KeyboardInterrupt):
+        sys.stderr.close()
     except Exception as e:
         error_msg = f"""
 {Colors.RED.value}Error while processing command {operation_name.upper()} {Colors.RESET.value}
 {Colors.YELLOW.value}Error: {Colors.RESET.value}{str(e)}"""
         for context_key, context_value in context_info.items():
+            context_value = str(context_value)
+            if "\n" in context_value:
+                context_value = "\n" + context_value
             error_msg += f"\n{Colors.YELLOW.value}{context_key}: {Colors.RESET.value} {context_value}"
         err_write(error_msg)
         exit(1)
+
+
+def json_loads(line, description=None):
+    try:
+        return json.loads(line)
+    except json.JSONDecodeError as e:
+        if description:
+            raise Exception(f"Invalid {description} format, Expected JSON format. | {str(e)}")
+        else:
+            raise Exception(f"Invalid data format, Expected JSON format. | {str(e)}")
+
 
 # endregion
 
@@ -456,7 +476,7 @@ def cmd_rex(regex, input_field=None):
     for line in input_lines():
         with error_handler("rex", {"Regex": regex, "Line": line}):
             if input_field is not None:
-                data = json.loads(line)
+                data = json_loads(line)
                 extracted_fields = regex_extract(data[input_field] if input_field in data else '', regex)
                 data.update(extracted_fields)
                 out_write(json.dumps(data))
@@ -464,6 +484,7 @@ def cmd_rex(regex, input_field=None):
                 extracted_fields = regex_extract(line, regex)
                 extracted_fields[LINE_KEY] = line
                 out_write(json.dumps(extracted_fields))
+
 
 def cmd_match(regex):
     for line in input_lines():
@@ -475,18 +496,20 @@ def cmd_match(regex):
 def cmd_where(expr):
     for line in input_lines():
         with error_handler("where", {"Expression": expr, "Line": line}):
-            if safe_eval(expr, json.loads(line)):
+            if safe_eval(expr, json_loads(line)):
                 out_write(line)
+
 
 def cmd_eval(expr):
     for line in input_lines():
         with error_handler("eval", {"Expression": expr, "Line": line}):
-            data = json.loads(line)
+            data = json_loads(line)
             safe_exec(expr, data)
             out_write(json.dumps(data))
 
+
 def cmd_sort(sort_option_exprs):
-    lines = [NullSafeDict(json.loads(line)) for line in input_lines()]
+    lines = [NullSafeDict(json_loads(line)) for line in input_lines()]
     sort_options = []
     with error_handler("sort", {"Options": " ".join(sort_option_exprs)}):
         for expr in sort_option_exprs:
@@ -509,8 +532,7 @@ def cmd_sort(sort_option_exprs):
                     if isinstance(line_data.get(field_name), (int, float)):
                         key.append(-line_data.get(field_name))
                     else:
-                        err_write("negative sort key for non-numeric value not supported: " + field_name + "")
-                        exit(1)
+                        raise Exception("negative sort key for non-numeric value not supported: " + field_name + "")
                 else:
                     key.append(line_data.get(field_name))
             return tuple(key)
@@ -524,7 +546,7 @@ def cmd_sort(sort_option_exprs):
 def cmd_group_eval(expr):
     for line in input_lines():
         with error_handler("geval", {"Expression": expr, "Line": line}):
-            data = json.loads(line)
+            data = json_loads(line)
             safe_exec(expr, data, True)
             out_write(json.dumps(data))
 
@@ -545,7 +567,7 @@ def cmd_help():
 
 def cmd_table(fields=[]):
     with error_handler("table", {"Fields": " ".join(fields)}):
-        data = [NullSafeDict(json.loads(line)) for line in input_lines()]
+        data = [NullSafeDict(json_loads(line)) for line in input_lines()]
         if not data:
             return
 
@@ -584,13 +606,13 @@ def cmd_table(fields=[]):
 
 def cmd_json():
     with error_handler("json", {}):
-        print(json.dumps([json.loads(line) for line in input_lines()]))
+        print(json.dumps([json_loads(line) for line in input_lines()]))
 
 
 def cmd_csv():
     with error_handler("csv", {}):
         # Collect all lines and their fields
-        data = [json.loads(line) for line in input_lines()]
+        data = [json_loads(line) for line in input_lines()]
         if not data:
             return
 
@@ -623,41 +645,42 @@ def cmd_lookup(field, lookup_data_command, join_type="left"):
     if not field:
         err_write("No lookup field specified", Colors.RED)
         exit(1)
-    try:
+
+    common_err_context_info = {"Join Type": join_type, "Lookup Data Retrieval Command": lookup_data_command}
+    with error_handler("lookup", {**common_err_context_info}) as err_context_info:
         result = execute_command(lookup_data_command)
         if not result['success']:
-            err_write("Error in the lookup command: "+str(result['error']))
-            exit(1)
+            raise Exception("Error in the lookup command: " + str(result['error']))
 
         lookup_data = result['output']
-        right_data = json.loads(lookup_data)
+        err_context_info['Lookup Data'] = lookup_data
+        right_data = json_loads(lookup_data, description="lookup data")
         if not right_data:
-            err_write("Empty lookup data.")
-            exit(1)
-    except json.JSONDecodeError:
-        err_write("Invalid lookup data format\n---"+lookup_data+"\n---")
-        exit(1)
+            raise Exception("Empty lookup data.")
 
     if join_type == "right" or join_type == "outer":
-        left_data = [json.loads(line) for line in input_lines()]
-        joined_data = join_dict_lists(left_data, right_data, field, join_type)
-        for line in joined_data:
-            out_write(json.dumps(line))
+        with error_handler("lookup", {**common_err_context_info}):
+            left_data = [json_loads(line) for line in input_lines()]
+            joined_data = join_dict_lists(left_data, right_data, field, join_type)
+            for line in joined_data:
+                out_write(json.dumps(line))
     else:
-        right_lookup = defaultdict(list)
-        for r in right_data:
-            right_lookup[r.get(field)].append(r)
+        with error_handler("lookup", {**common_err_context_info}):
+            right_lookup = defaultdict(list)
+            for r in right_data:
+                right_lookup[r.get(field)].append(r)
 
-        for lidx, l in enumerate(input_lines()):
-            l = json.loads(l)
-            key = l.get(field)
-            matches = right_lookup.get(key, [])
-            if matches:
-                for ridx, r in enumerate(matches):
-                    res = {**l, **r}
-                    out_write(json.dumps(res))
-            elif join_type == 'left':
-                out_write(json.dumps(l))
+            for lidx, l in enumerate(input_lines()):
+                with error_handler("lookup", {**common_err_context_info, "Line": l}):
+                    l = json_loads(l)
+                    key = l.get(field)
+                    matches = right_lookup.get(key, [])
+                    if matches:
+                        for ridx, r in enumerate(matches):
+                            res = {**l, **r}
+                            out_write(json.dumps(res))
+                    elif join_type == 'left':
+                        out_write(json.dumps(l))
 
 
 def cmd_group(group_keys):
@@ -666,144 +689,154 @@ def cmd_group(group_keys):
         exit(1)
     grouped = defaultdict(list)
     for line in input_lines():
-        line_data = NullSafeDict(json.loads(line))
-        key = tuple(line_data[k] for k in group_keys)
-        # Extract the rest of the fields
-        remainder = {k: v for k, v in line_data.items() if k not in group_keys}
-        grouped[key].append(remainder)
+        with error_handler("group", {"Group Keys": group_keys, "Line": line}):
+            line_data = NullSafeDict(json_loads(line))
+            key = tuple(line_data[k] for k in group_keys)
+            # Extract the rest of the fields
+            remainder = {k: v for k, v in line_data.items() if k not in group_keys}
+            grouped[key].append(remainder)
 
     result = []
-    for key, group_items in grouped.items():
-        grouped_entry = dict(zip(group_keys, key))
-        grouped_entry[GROUPED_KEY] = group_items
-        result.append(grouped_entry)
+    with error_handler("group", {"Group Keys": group_keys}):
+        for key, group_items in grouped.items():
+            grouped_entry = dict(zip(group_keys, key))
+            grouped_entry[GROUPED_KEY] = group_items
+            result.append(grouped_entry)
 
-    for r in result:
-        out_write(json.dumps(r))
+        for r in result:
+            out_write(json.dumps(r))
 
 
 def cmd_cluster(field, threshold):
-    groups = defaultdict(list)
-    data = []
-    for line in input_lines():
-        if field is None:
-            data.append({LINE_KEY: line})
-        else:
-            data.append(json.loads(line))
-    field = field if field is not None else LINE_KEY
-    while data:
-        base = data.pop(0)
-        groups[base[field]].append(base)
-        similar = []
-        for s in data:
-            matcher = SequenceMatcher(None, base[field], s[field])
-            if matcher.ratio() > threshold:
-                similar.append((s, matcher.ratio()))
-        for s in similar:
-            s, ratio = s
-            s[CLUSTER_RATIO_KEY] = ratio
-            groups[base[field]].append(s)
-            data.remove(s)
-    for key, value in groups.items():
-        out_write(json.dumps({field: key, GROUPED_KEY: value}))
+    with error_handler("cluster", {"Field": field, "Threshold": threshold}):
+        groups = defaultdict(list)
+        data = []
+        for line in input_lines():
+            if field is None:
+                data.append({LINE_KEY: line})
+            else:
+                data.append(json_loads(line))
+        field = field if field is not None else LINE_KEY
+        while data:
+            base = data.pop(0)
+            groups[base[field]].append(base)
+            similar = []
+            for s in data:
+                matcher = SequenceMatcher(None, base[field], s[field])
+                if matcher.ratio() > threshold:
+                    similar.append((s, matcher.ratio()))
+            for s in similar:
+                s, ratio = s
+                s[CLUSTER_RATIO_KEY] = ratio
+                groups[base[field]].append(s)
+                data.remove(s)
+        for key, value in groups.items():
+            out_write(json.dumps({field: key, GROUPED_KEY: value}))
 
 
 def cmd_count():
-    c = 0
-    for _ in input_lines():
-        c += 1
-    out_write(str(c))
+    with error_handler("count"):
+        c = 0
+        for _ in input_lines():
+            c += 1
+        out_write(str(c))
 
 
 def cmd_fields(fields):
     for line in input_lines():
-        line = json.loads(line)
-        filtered_data = {}
-        for field in fields:
-            filtered_data[field] = line[field] if field in line else None
-        out_write(json.dumps(filtered_data))
+        with error_handler("fields", {"Line": line, "Fields": fields}):
+            line = json_loads(line)
+            filtered_data = {}
+            for field in fields:
+                filtered_data[field] = line[field] if field in line else None
+            out_write(json.dumps(filtered_data))
 
 
 def cmd_mul(line_pattern):
     previous_line = None
     for line in input_lines(strip=False):
-        if re.search(line_pattern, line):
-            if previous_line is not None:
-                out_write(json.dumps({LINE_KEY: previous_line}))
-            previous_line = line
-        else:
-            if previous_line is not None:
-                previous_line += "\n" + line
-            else:
+        with error_handler("fields", {"Line": line}):
+            if re.search(line_pattern, line):
+                if previous_line is not None:
+                    out_write(json.dumps({LINE_KEY: previous_line}))
                 previous_line = line
+            else:
+                if previous_line is not None:
+                    previous_line += "\n" + line
+                else:
+                    previous_line = line
     if previous_line is not None:
         out_write(json.dumps({LINE_KEY: previous_line}))
 
 
 def cmd_graph(x_fields, y_fields, width=100):
-    from collections import OrderedDict
-    x_fields = x_fields.split(",")
-    y_fields = y_fields.split(",")
+    with error_handler("graph", {"X Fields": x_fields, "Y Fields": y_fields, "Width": width}):
+        x_fields = x_fields.split(",")
+        y_fields = y_fields.split(",")
 
-    data = [json.loads(line) for line in input_lines()]
+        data = [json_loads(line) for line in input_lines()]
 
-    value_map = OrderedDict()
-    labels = []
-    for item in data:
-        label = " | ".join(
-            str(item.get(field, "null")) if item.get(field) is not None else "null" for field in x_fields)
-        if label not in value_map:
-            value_map[label] = OrderedDict()
-            labels.append(label)
-        for y_field in y_fields:
-            value_map[label][y_field] = item.get(y_field, 0) or 0
+        value_map = OrderedDict()
+        labels = []
+        for item in data:
+            label = " | ".join(
+                str(item.get(field, "null")) if item.get(field) is not None else "null" for field in x_fields)
+            if label not in value_map:
+                value_map[label] = OrderedDict()
+                labels.append(label)
+            for y_field in y_fields:
+                value_map[label][y_field] = item.get(y_field, 0) or 0
 
-    yfield_color = {}
-    for idx, y_field in enumerate(y_fields):
-        yfield_color[y_field] = ANSI_COLORS[idx % len(ANSI_COLORS)]
+        yfield_color = {}
+        for idx, y_field in enumerate(y_fields):
+            yfield_color[y_field] = ANSI_COLORS[idx % len(ANSI_COLORS)]
 
-    max_per_field = {y: max((value_map[label][y] for label in labels), default=0) for y in y_fields}
-    longest_label = max((len(label) for label in labels), default=0)
-    y_field_name_len = max((len(y) for y in y_fields), default=0)
+        max_per_field = {y: max((value_map[label][y] for label in labels), default=0) for y in y_fields}
+        longest_label = max((len(label) for label in labels), default=0)
+        y_field_name_len = max((len(y) for y in y_fields), default=0)
 
-    for label in labels:
-        for i, y_field in enumerate(y_fields):
-            value = value_map[label][y_field]
-            max_value = max_per_field[y_field] or 1  # Avoid division by zero
-            bar_len = int((value / max_value) * width) if max_value else 0
-            bar = '#' * bar_len
-            color = yfield_color[y_field]
-            # Only print the label on the first y_field row per label group
-            label_to_print = label if i == 0 else ' ' * longest_label
-            print(f"{label_to_print:>{longest_label}} | {y_field:>{y_field_name_len}}: {color}{bar}{Colors.RESET.value} ({value})")
-
-    # endregion
+        for label in labels:
+            for i, y_field in enumerate(y_fields):
+                value = value_map[label][y_field]
+                max_value = max_per_field[y_field] or 1  # Avoid division by zero
+                bar_len = int((value / max_value) * width) if max_value else 0
+                bar = '#' * bar_len
+                color = yfield_color[y_field]
+                # Only print the label on the first y_field row per label group
+                label_to_print = label if i == 0 else ' ' * longest_label
+                print(
+                    f"{label_to_print:>{longest_label}} | {y_field:>{y_field_name_len}}: {color}{bar}{Colors.RESET.value} ({value})")
 
 
 def cmd_gen(expr):
-    data = safe_eval(expr, {})
-    if isinstance(data, list):
-        for line in data:
-            out_write(json.dumps(line))
-    else:
-        out_write(json.dumps(data))
+    with error_handler("gen", {"Expression": expr}):
+        data = safe_eval(expr, {})
+        if isinstance(data, list):
+            for line in data:
+                out_write(json.dumps(line))
+        else:
+            out_write(json.dumps(data))
 
 
 def cmd_dedup(fields):
     known_lines = []
     for line in input_lines():
-        data = NullSafeDict(json.loads(line))
-        key_data = ",".join([str(data[f]) for f in fields])
-        if key_data not in known_lines:
-            known_lines.append(key_data)
-            out_write(line)
+        with error_handler("dedup", {"Line": line, "Fields": fields}):
+            data = NullSafeDict(json_loads(line))
+            key_data = ",".join([str(data[f]) for f in fields])
+            if key_data not in known_lines:
+                known_lines.append(key_data)
+                out_write(line)
+
+    # endregion
+
 
 sys.stdout.reconfigure(line_buffering=True)
 
 if __name__ == '__main__':
-    try:
-        args = sys.argv[1:]
-        action = args[0] if len(args) > 0 else "help"
+    args = sys.argv[1:]
+    action = args[0] if len(args) > 0 else "help"
+    with error_handler(action, {"Parameters": args[1:]}) as err_context_info:
         if action == "help":
             cmd_help()
         elif action == "rex":
@@ -867,10 +900,4 @@ if __name__ == '__main__':
             expr = args[1]
             cmd_gen(expr)
         else:
-            err_write("unknown command: " + action)
-            exit(1)
-    except KeyboardInterrupt:
-        err_write("\nInterrupted")
-        sys.stderr.close()
-    except InterruptedError:
-        sys.stderr.close()
+            raise Exception("Unknown command.")
