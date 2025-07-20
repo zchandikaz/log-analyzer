@@ -58,6 +58,7 @@ EXEC_UTIL_FUNCS = {
     'perc': percentile,
     'avg': lambda data: sum(data) / len(data),
     'iif': lambda cond, true_val, false_val: true_val if cond else false_val,
+    'replace': lambda text, pattern, replacement : re.sub(pattern, replacement, text)
 }
 BUILTINS = __builtins__
 CONCURRENT_THREAD_COUNT = 20
