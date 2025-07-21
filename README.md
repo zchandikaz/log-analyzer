@@ -20,14 +20,26 @@ Log Analyzer is a versatile tool designed to help you extract, filter, transform
 #### Unix/Linux/macOS
 
 ```shell
-bash -c "$(curl -fsSL https://github.com/zchandikaz/log-analyzer/raw/refs/heads/main/install.sh)"
+sudo bash -c "$(curl -fsSL https://github.com/zchandikaz/log-analyzer/raw/refs/heads/main/install.sh)"
 ```
+
+The installation script supports two modes:
+- **With sudo access**: Installs to `/usr/local/bin` (system-wide installation)
+- **Without sudo access**: Installs to `$HOME/bin` (user-specific installation)
+
+The script automatically detects if sudo access is available and will prompt you accordingly.
 
 #### Windows
 
 ```powershell
 powershell -ExecutionPolicy Bypass -Command "Invoke-Expression (New-Object System.Net.WebClient).DownloadString('https://github.com/zchandikaz/log-analyzer/raw/refs/heads/main/install.ps1')"
 ```
+
+The installation script supports two modes:
+- **With administrator privileges**: Installs to `C:\Program Files\log-analyzer` and adds to system PATH
+- **Without administrator privileges**: Installs to `%USERPROFILE%\log-analyzer` and adds to user PATH
+
+The script automatically detects if administrator privileges are available and will prompt you accordingly.
 
 This will install the `lgx` command-line tool on your system.
 
