@@ -15,6 +15,10 @@ Log Analyzer is a versatile tool designed to help you extract, filter, transform
 
 ## Setup
 
+### Requirements
+
+- Python 3.7 or higher
+
 ### Installation
 
 #### Unix/Linux/macOS
