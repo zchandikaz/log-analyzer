@@ -58,7 +58,7 @@ EXEC_UTIL_FUNCS = {
     'perc': percentile,
     'avg': lambda data: sum(data) / len(data),
     'iif': lambda cond, true_val, false_val: true_val if cond else false_val,
-    'replace': lambda text, pattern, replacement : re.sub(pattern, replacement, text)
+    'replace': lambda text, pattern, replacement : re.sub(pattern, replacement, text, flags=re.DOTALL)
 }
 BUILTINS = __builtins__
 CONCURRENT_THREAD_COUNT = 20
@@ -292,7 +292,7 @@ Example Workflow:
 # region : utils
 
 def match_line_with_regex(line, regex):
-    return re.search(regex, line) is not None
+    return re.search(regex, line, re.DOTALL) is not None
 
 
 def input_lines(strip=True):
@@ -307,7 +307,7 @@ def input_lines(strip=True):
 
 
 def regex_extract(line, regex):
-    match = re.search(regex, line)
+    match = re.search(regex, line, re.DOTALL)
     if match:
         groups = match.groupdict() if match.groupdict() else {i: g for i, g in enumerate(match.groups(), start=1)}
         return groups
@@ -766,7 +766,7 @@ def cmd_mul(line_pattern):
     previous_line = None
     for line in input_lines(strip=False):
         with error_handler("fields", {"Line": line}):
-            if re.search(line_pattern, line):
+            if re.search(line_pattern, line, re.DOTALL):
                 if previous_line is not None:
                     out_write(json.dumps({LINE_KEY: previous_line}))
                 previous_line = line
