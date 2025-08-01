@@ -1,4 +1,5 @@
 import json
+import random
 import urllib.request
 import math
 import re
@@ -58,7 +59,8 @@ EXEC_UTIL_FUNCS = {
     'perc': percentile,
     'avg': lambda data: sum(data) / len(data),
     'iif': lambda cond, true_val, false_val: true_val if cond else false_val,
-    'replace': lambda text, pattern, replacement : re.sub(pattern, replacement, text, flags=re.DOTALL)
+    'replace': lambda text, pattern, replacement : re.sub(pattern, replacement, text, flags=re.DOTALL),
+    'randint': random.randint
 }
 BUILTINS = __builtins__
 CONCURRENT_THREAD_COUNT = 20
@@ -838,6 +840,17 @@ def cmd_dedup(fields):
                 known_lines.append(key_data)
                 out_write(line)
 
+def cmd_accum(fields):
+    accum_data=dict()
+    for line in input_lines():
+        with error_handler("accum", {"Line": line, "Fields": fields}):
+            data = NullSafeDict(json_loads(line))
+            for f in fields:
+                current_value = accum_data[f] if f in accum_data else 0
+                data[f] = current_value + data[f]
+                accum_data[f] = data[f]
+            out_write(json.dumps(data))
+
 def cmd_upgrade():
     with error_handler("upgrade"):
         url = "https://raw.githubusercontent.com/zchandikaz/log-analyzer/main/log_analyzer.py"
@@ -915,6 +928,8 @@ if __name__ == '__main__':
             cmd_table(args[1:])
         elif action == "dedup":
             cmd_dedup(args[1:])
+        elif action == "accum":
+            cmd_accum(args[1:])
         elif action == "json":
             cmd_json()
         elif action == "csv":
