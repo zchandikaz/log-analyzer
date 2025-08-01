@@ -343,7 +343,19 @@ cat logs.json | lgx geval "percentiles = {'p50': sorted(response_time)[len(respo
   cat logs.json | lgx dedup user_id request_path
   ```
 
-### 19. csv
+### 19. accum \<fields\>
+- Accumulates values for specified numeric fields across JSON log entries.
+- Maintains a running total for each field and updates each log entry with the accumulated value.
+- Example:
+  ```shell
+  cat metrics.json | lgx accum count
+  ```
+- Accumulate multiple fields:
+  ```shell
+  cat metrics.json | lgx accum errors warnings
+  ```
+
+### 20. csv
 - Outputs the log data as a CSV file.
 - Automatically includes headers based on all fields present in the data.
 - Properly escapes special characters and handles quoting.
@@ -356,7 +368,7 @@ cat logs.json | lgx geval "percentiles = {'p50': sorted(response_time)[len(respo
   cat logs.json | lgx where "status_code >= 400" | lgx csv
   ```
 
-### 20. upgrade
+### 21. upgrade
 - Updates the log analyzer tool to the latest version from the GitHub repository.
 - This command downloads the latest version of the script and replaces the current installation.
 - Example:
