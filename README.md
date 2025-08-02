@@ -376,6 +376,19 @@ cat logs.json | lgx geval "percentiles = {'p50': sorted(response_time)[len(respo
   lgx upgrade
   ```
 
+### 22. highlight \<text_list\>
+- Highlights specified text in each log line with different colors.
+- Multiple text strings can be provided, each will be highlighted with a different color.
+- Colors cycle through cyan, yellow, magenta, green, blue, and red if more than 6 text strings are provided.
+- Example:
+  ```shell
+  cat server.log | lgx highlight ERROR WARNING
+  ```
+- Highlight multiple terms with different colors:
+  ```shell
+  cat app.log | lgx highlight exception error warning
+  ```
+
 ## Examples
 
 The repository includes detailed examples demonstrating how to use Log Analyzer for different types of logs:

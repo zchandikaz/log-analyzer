@@ -258,6 +258,15 @@ Commands:
     - Example:
       lgx upgrade
 
+22. highlight <text_list>
+    - Highlights specified text in each log line with different colors.
+    - Multiple text strings can be provided, each will be highlighted with a different color.
+    - Colors cycle through cyan, yellow, magenta, green, blue, and red if more than 6 text strings are provided.
+    - Example:
+      cat server.log | lgx highlight ERROR WARNING
+    - Highlight multiple terms with different colors:
+      cat app.log | lgx highlight exception error warning
+
 Examples:
 ---------
 
@@ -859,6 +868,15 @@ def cmd_accum(fields):
                 accum_data[f] = data[f]
             out_write(json.dumps(data))
 
+def cmd_highlight(text_list):
+    for line in input_lines():
+        with error_handler("highlight", {"Text List": text_list}):
+            for i in range(len(text_list)):
+                text = text_list[i]
+                color = ANSI_COLORS[i%len(ANSI_COLORS)]
+                line = line.replace(text, f"{color}{text}{Colors.RESET.value}")
+            out_write(line)
+
 def cmd_upgrade():
     with error_handler("upgrade"):
         url = "https://raw.githubusercontent.com/zchandikaz/log-analyzer/main/log_analyzer.py"
@@ -938,6 +956,8 @@ if __name__ == '__main__':
             cmd_dedup(args[1:])
         elif action == "accum":
             cmd_accum(args[1:])
+        elif action == "highlight":
+            cmd_highlight(args[1:])
         elif action == "json":
             cmd_json()
         elif action == "csv":
