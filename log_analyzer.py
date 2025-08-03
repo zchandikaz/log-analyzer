@@ -354,21 +354,20 @@ def regex_extract(line, regex):
     return {}
 
 
-def out_write(line):
+def _write(stream, line, color=None):
     try:
-        sys.stdout.write(line + "\n")
+        if stream.isatty() and color and isinstance(color, Colors):
+            stream.write(color.value + line + Colors.RESET.value + "\n")
+        else:
+            stream.write(line + "\n")
     except OSError:
         raise InterruptedError
 
+def out_write(line, color=None):
+    _write(sys.stdout, line, color=color)
 
 def err_write(line, color=None):
-    try:
-        if sys.stderr.isatty() and color and isinstance(color, Colors):
-            sys.stderr.write(color.value + line + Colors.RESET.value + "\n")
-        else:
-            sys.stderr.write(line + "\n")
-    except OSError:
-        raise InterruptedError
+    _write(sys.stderr, line, color=color)
 
 
 class DefaultDict(dict):
@@ -645,13 +644,14 @@ def cmd_table(fields=[]):
 
         # Write header row
         header_row = " | ".join(header.ljust(width) for header, width in zip(headers, col_widths))
-        out_write(header_row)
+        out_write(header_row, color=Colors.FG_GREEN)
         out_write("-" * len(header_row))
 
         # Write data rows
-        for row in data:
+        for i in range(len(data)):
+            row = data[i]
             row_str = " | ".join(str(row.get(key, '')).ljust(width) for key, width in zip(headers, col_widths))
-            out_write(row_str)
+            out_write(row_str, color=Colors.FG_MAGENTA if i%2 == 0 else Colors.FG_WHITE)
 
 
 def cmd_json():
