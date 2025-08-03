@@ -72,22 +72,43 @@ CLUSTER_RATIO_KEY = "_cluster_ratio"
 
 class Colors(Enum):
     RESET = "\033[0m"
-    RED = "\033[31m"
-    GREEN = "\033[32m"
-    YELLOW = "\033[33m"
-    BLUE = "\033[34m"
-    MAGENTA = "\033[35m"
-    CYAN = "\033[36m"
+    FG_BLACK = "\033[30m"
+    FG_RED = "\033[31m"
+    FG_GREEN = "\033[32m"
+    FG_YELLOW = "\033[33m"
+    FG_BLUE = "\033[34m"
+    FG_MAGENTA = "\033[35m"
+    FG_CYAN = "\033[36m"
+    FG_WHITE = "\033[37m"
+    BG_BLACK = "\033[40m"
+    BG_RED = "\033[41m"
+    BG_GREEN = "\033[42m"
+    BG_YELLOW = "\033[43m"
+    BG_BLUE = "\033[44m"
+    BG_MAGENTA = "\033[45m"
+    BG_CYAN = "\033[46m"
+    BG_WHITE = "\033[47m"
 
 
-ANSI_COLORS = [
-    Colors.CYAN.value,
-    Colors.YELLOW.value,
-    Colors.MAGENTA.value,
-    Colors.GREEN.value,
-    Colors.BLUE.value,
-    Colors.RED.value
+FOREGROUND_COLORS = [
+    Colors.FG_CYAN.value,
+    Colors.FG_YELLOW.value,
+    Colors.FG_MAGENTA.value,
+    Colors.FG_GREEN.value,
+    Colors.FG_BLUE.value,
+    Colors.FG_RED.value
 ]
+
+BACKGROUND_COLORS = [
+    Colors.BG_CYAN.value,
+    Colors.BG_YELLOW.value,
+    Colors.BG_MAGENTA.value,
+    Colors.BG_GREEN.value,
+    Colors.BG_BLUE.value,
+    Colors.BG_RED.value
+]
+
+ALL_COLORS = [*BACKGROUND_COLORS, *FOREGROUND_COLORS]
 
 documentation = r"""
 Log Analyzer Tool - Command Line Documentation
@@ -473,13 +494,13 @@ def error_handler(operation_name, context_info={}):
         sys.stderr.close()
     except Exception as e:
         error_msg = f"""
-{Colors.RED.value}Error while processing command {operation_name.upper()} {Colors.RESET.value}
-{Colors.YELLOW.value}Error: {Colors.RESET.value}{str(e)}"""
+{Colors.FG_RED.value}Error while processing command {operation_name.upper()} {Colors.RESET.value}
+{Colors.FG_YELLOW.value}Error: {Colors.RESET.value}{str(e)}"""
         for context_key, context_value in context_info.items():
             context_value = str(context_value)
             if "\n" in context_value:
                 context_value = "\n" + context_value
-            error_msg += f"\n{Colors.YELLOW.value}{context_key}: {Colors.RESET.value} {context_value}"
+            error_msg += f"\n{Colors.FG_YELLOW.value}{context_key}: {Colors.RESET.value} {context_value}"
         err_write(error_msg)
         exit(1)
 
@@ -672,7 +693,7 @@ def cmd_csv():
 
 def cmd_lookup(field, lookup_data_command, join_type="left"):
     if not field:
-        err_write("No lookup field specified", Colors.RED)
+        err_write("No lookup field specified", Colors.FG_RED)
         exit(1)
 
     common_err_context_info = {"Join Type": join_type, "Lookup Data Retrieval Command": lookup_data_command}
@@ -818,7 +839,7 @@ def cmd_graph(x_fields, y_fields, width=100):
 
         yfield_color = {}
         for idx, y_field in enumerate(y_fields):
-            yfield_color[y_field] = ANSI_COLORS[idx % len(ANSI_COLORS)]
+            yfield_color[y_field] = FOREGROUND_COLORS[idx % len(FOREGROUND_COLORS)]
 
         max_per_field = {y: max((value_map[label][y] for label in labels), default=0) for y in y_fields}
         longest_label = max((len(label) for label in labels), default=0)
@@ -873,7 +894,7 @@ def cmd_highlight(text_list):
         with error_handler("highlight", {"Text List": text_list}):
             for i in range(len(text_list)):
                 text = text_list[i]
-                color = ANSI_COLORS[i%len(ANSI_COLORS)]
+                color = ALL_COLORS[i % len(ALL_COLORS)]
                 line = line.replace(text, f"{color}{text}{Colors.RESET.value}")
             out_write(line)
 
