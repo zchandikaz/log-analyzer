@@ -1,16 +1,17 @@
 import json
-import random
-import urllib.request
 import math
+import random
 import re
 import subprocess
 import sys
+import urllib.request
 from collections import OrderedDict
 from collections import defaultdict
 from contextlib import contextmanager
 from datetime import *
 from difflib import SequenceMatcher
 from enum import Enum
+
 
 def percentile(data, p):
     """
@@ -642,6 +643,9 @@ def cmd_table(fields=[]):
                 width = max(width, len(cell_value))
             col_widths.append(width)
 
+        headers.insert(0, "#")
+        col_widths.insert(0,  len(str(len(data)))+1)
+
         # Write header row
         header_row = " | ".join(header.ljust(width) for header, width in zip(headers, col_widths))
         out_write(header_row, color=Colors.FG_GREEN)
@@ -650,6 +654,7 @@ def cmd_table(fields=[]):
         # Write data rows
         for i in range(len(data)):
             row = data[i]
+            row['#'] = i+1
             row_str = " | ".join(str(row.get(key, '')).ljust(width) for key, width in zip(headers, col_widths))
             out_write(row_str, color=Colors.FG_MAGENTA if i%2 == 0 else Colors.FG_WHITE)
 
