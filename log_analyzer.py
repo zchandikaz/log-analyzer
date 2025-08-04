@@ -664,26 +664,27 @@ def cmd_json():
         out_write(json.dumps([json_loads(line) for line in input_lines()]))
 
 
-def cmd_csv():
+def cmd_csv(ordered_fields=[]):
     with error_handler("csv", {}):
         # Collect all lines and their fields
         data = [json_loads(line) for line in input_lines()]
         if not data:
             return
 
-        # Get all unique fields across all records
-        fields = set()
-        for item in data:
-            fields.update(item.keys())
-        fields = sorted(list(fields))  # Sort fields for consistent column order
+        if len(ordered_fields)==0:
+            # Get all unique fields across all records
+            fields = set()
+            for item in data:
+                fields.update(item.keys())
+            ordered_fields = sorted(list(fields))  # Sort fields for consistent column order
 
         # Write header
-        out_write(','.join(f'"{field}"' for field in fields))
+        out_write(','.join(f'"{field}"' for field in ordered_fields))
 
         # Write data rows
         for item in data:
             row = []
-            for field in fields:
+            for field in ordered_fields:
                 value = item.get(field, '')
                 # Escape quotes and special characters
                 if isinstance(value, str):
@@ -987,7 +988,7 @@ if __name__ == '__main__':
         elif action == "json":
             cmd_json()
         elif action == "csv":
-            cmd_csv()
+            cmd_csv(args[1:])
         elif action == "lookup":
             cmd_lookup(args[1], args[2], args[3] if len(args) > 3 else "left")
         elif action == "graph":
