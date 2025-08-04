@@ -896,7 +896,7 @@ def cmd_accum(fields):
             out_write(json.dumps(data))
 
 def cmd_highlight(text_list):
-    for line in input_lines():
+    for line in input_lines(strip=False):
         with error_handler("highlight", {"Text List": text_list}):
             for i in range(len(text_list)):
                 text = text_list[i]
